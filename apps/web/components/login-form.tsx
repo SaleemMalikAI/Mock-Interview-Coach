@@ -1,8 +1,10 @@
 "use client";
 
+import { ArrowLeft, Loader2, Mail, MailCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
+import { GoogleIcon } from "@/components/google-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +31,7 @@ export function LoginForm({ next }: LoginFormProps) {
     });
     if (error) {
       setStatus("idle");
-      toast.error(error.message);
+      toast.error("Couldn't send the link", { description: error.message });
       return;
     }
     setStatus("sent");
@@ -43,19 +45,23 @@ export function LoginForm({ next }: LoginFormProps) {
     });
     if (error) {
       setStatus("idle");
-      toast.error(error.message);
+      toast.error("Google sign-in failed", { description: error.message });
     }
   }
 
   if (status === "sent") {
     return (
-      <div role="status" className="space-y-2 text-center">
-        <p className="font-medium">Check your email</p>
-        <p className="text-sm text-muted-foreground">
-          We sent a sign-in link to <span className="font-medium text-foreground">{email}</span>. Open it on
-          this device to continue.
+      <div role="status" className="rounded-xl border bg-card p-6 text-center shadow-[var(--shadow-soft)]">
+        <span className="mx-auto grid size-12 place-items-center rounded-full bg-success/10 text-success">
+          <MailCheck className="size-6" aria-hidden />
+        </span>
+        <p className="mt-4 font-semibold">Check your inbox</p>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          We sent a sign-in link to <span className="font-medium text-foreground">{email}</span>. Open it on this
+          device to continue.
         </p>
-        <Button variant="link" onClick={() => setStatus("idle")}>
+        <Button variant="ghost" size="sm" className="mt-4" onClick={() => setStatus("idle")}>
+          <ArrowLeft data-icon="inline-start" aria-hidden />
           Use a different email
         </Button>
       </div>
@@ -65,24 +71,30 @@ export function LoginForm({ next }: LoginFormProps) {
   const busy = status !== "idle";
 
   return (
-    <div className="space-y-6">
-      <Button type="button" variant="outline" className="w-full" disabled={busy} onClick={signInWithGoogle}>
-        {status === "redirecting" ? "Redirecting…" : "Continue with Google"}
+    <div className="space-y-5">
+      <Button type="button" variant="outline" size="lg" className="w-full bg-card" disabled={busy} onClick={signInWithGoogle}>
+        {status === "redirecting" ? (
+          <Loader2 className="animate-spin" aria-hidden />
+        ) : (
+          <GoogleIcon className="size-5" />
+        )}
+        Continue with Google
       </Button>
 
-      <div className="flex items-center gap-3 text-xs uppercase text-muted-foreground">
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span className="h-px flex-1 bg-border" />
-        or
+        or with email
         <span className="h-px flex-1 bg-border" />
       </div>
 
       <form onSubmit={sendMagicLink} className="space-y-3">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">Work or personal email</Label>
           <Input
             id="email"
             type="email"
             autoComplete="email"
+            inputMode="email"
             placeholder="you@example.com"
             required
             value={email}
@@ -90,7 +102,8 @@ export function LoginForm({ next }: LoginFormProps) {
             disabled={busy}
           />
         </div>
-        <Button type="submit" className="w-full" disabled={busy}>
+        <Button type="submit" size="lg" className="w-full" disabled={busy}>
+          {status === "sending" ? <Loader2 className="animate-spin" aria-hidden /> : <Mail aria-hidden />}
           {status === "sending" ? "Sending link…" : "Email me a sign-in link"}
         </Button>
       </form>

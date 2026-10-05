@@ -48,6 +48,8 @@ class TurnOut(BaseModel):
     question: str
     source: Literal["bank", "jd"]
     status: TurnStatus
+    transcript: str | None = None
+    duration_seconds: float | None = None
 
 
 class InterviewOut(BaseModel):
@@ -64,3 +66,17 @@ class InterviewOut(BaseModel):
     created_at: datetime
     completed_at: datetime | None
     turns: list[TurnOut] = []
+
+
+class InterviewSummaryOut(BaseModel):
+    """One row on the dashboard."""
+
+    id: UUID
+    role: Role
+    level: Level
+    type: InterviewType
+    num_questions: int
+    status: InterviewStatus
+    overall_score: float | None
+    answered: int
+    created_at: datetime

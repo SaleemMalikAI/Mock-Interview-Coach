@@ -7,8 +7,8 @@ Claude updates this at the end of every feature. Newest entry on top.
 | F1 Auth | ✅ | Magic link + Google (Google needs OAuth client in dashboard), proxy guards, FastAPI JWKS verification |
 | F2 Interview setup | ✅ | `/interview/new` → `POST /interviews` → redirect to `/interview/[id]` (room placeholder) |
 | F3 Question plan (RAG) | ✅ | Built inside `POST /interviews`; ~2.5–2.9 s planning, 4.1–4.7 s per request from Pakistan to the Mumbai DB |
-| F4 Interview room | ⬜ | |
-| F5 Transcription | 🟨 | API done (`POST /interviews/{id}/turns/{turn_id}/answer`); recorder UI next, after the UI redesign |
+| F4 Interview room | 🟨 | Room UI, progress, question list, keyboard and re-record done; TTS playback and skip still to do |
+| F5 Transcription | ✅ | Recorder (webm/mp4, 3-min cap, live level meter, Space key, review/re-record) → upload → transcript in 1.9–2.9 s |
 | F6 Speech metrics | ⬜ | |
 | F7 Answer evaluation | ⬜ | |
 | F8 Final report | ⬜ | |
@@ -47,6 +47,9 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - Whisper (`whisper-large-v3-turbo` on Groq) is prompted with filler words so it keeps "um/uh/like" for F6. It hallucinates "Thank you." on silence and `no_speech_prob` doesn't flag it, so transcripts made only of known filler phrases are treated as `empty_audio` (the recorder will also check mic level client-side).
 - Answer errors return `{"detail": {"code", "message"}}` with codes `not_found` 404, `already_evaluated` 409, `unsupported_type` 415, `too_large` 413, `empty_audio`/`too_long` 422, `transcription_failed`/`upload_failed` 502.
 - Storage objects can't be deleted with SQL (`storage.protect_delete`); use the Storage API.
+- UI design system (2026-10-05 redesign): indigo brand, emerald success, amber warning, rose recording as oklch tokens with light/dark pairs in `globals.css`; Geist Sans/Mono; 44px+ touch targets (button `default` h-10, `lg` h-11, `xl` h-14); one shadow scale (`--shadow-soft`, `--shadow-lift`); Lucide icons only; dark mode via next-themes.
+- Pages behind auth live in the `app/(app)` route group, whose layout renders the sticky header (logo, nav with active state, theme toggle, user menu). URLs are unchanged.
+- Product name in the UI is "Mock Interview Coach". "InterviewCoach" was avoided because it is another company's brand (InterviewCoach.AI).
 - Request-id middleware sets an `x-request-id` header and a log context var, which covers the structured-logging rule from the start.
 
 ## Known issues
@@ -62,9 +65,14 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - Groq latency occasionally spikes (one 8.4 s response seen); the JD timeout keeps the plan under budget but that interview then has bank-only questions.
 - Groq TTS (`canopylabs/orpheus-v1-english`) needs its terms accepted once in the Groq console before F4 can use it.
 - Security advisor: "leaked password protection disabled" — not relevant while sign-in is magic link + Google only.
+- `globals.css` from `shadcn init` had `--font-sans: var(--font-sans)` (self-reference), so the app rendered in the browser's serif font until the redesign fixed it.
 - Not deployed yet (Vercel for `apps/web`, Railway for `apps/api`).
 
 ## Log
+### 2026-10-05: UI redesign + F5 recorder
+- Redesigned landing (hero with product preview, how it works, features, CTA), login (brand panel + form, Google "G" mark), dashboard (stats, real interview list via new `GET /interviews`, empty/loading/error states), setup (role cards with icons, segmented options, JD counter, sticky summary), room (progress, question card, recorder, transcript card, question stepper), 404 and room error page.
+- `hooks/use-recorder.ts` (MediaRecorder, AnalyserNode meter, silence detection, 3-min cap, permission/no-mic/unsupported errors), `AnswerRecorder`, `TranscriptCard`, `QuestionSteps`, `InterviewRoom`. Turns now return the user's own transcript.
+- Verified in Chrome with a fake microphone fed from a spoken WAV: record (Space), review, submit, transcript at 360px and 1280px, light and dark, zero horizontal overflow on every page, no console errors. 72 API tests pass.
 ### 2026-10-05: F5 Transcription (API)
 - Migration `20261005120000_answer_audio_storage.sql` (bucket + 4 own-folder policies), `GroqSTT`, `services/storage.py`, `services/answers.py`, `routers/answers.py`. Upload and STT run in parallel.
 - Live: 25 s answer transcribed in ~1.7 s (webm and mp4), re-record 2.4 s, and silence/wrong type/11 MB/foreign turn/no token each return their specific error. Turn → `answered`, interview → `in_progress`. 71 tests pass.

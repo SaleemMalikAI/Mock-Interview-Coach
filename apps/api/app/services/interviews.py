@@ -2,11 +2,11 @@ import logging
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Interview, InterviewTurn
-from app.schemas.interviews import InterviewCreate
+from app.schemas.interviews import InterviewCreate, InterviewSummaryOut
 from app.services.question_plan import QuestionPlanner
 
 logger = logging.getLogger(__name__)
@@ -73,3 +73,36 @@ class InterviewService:
             )
         ).scalars()
         return InterviewWithTurns(interview, list(turns))
+
+    async def list(self, user_id: UUID, limit: int = 50) -> list[InterviewSummaryOut]:
+        answered = (
+            select(func.count())
+            .where(
+                InterviewTurn.interview_id == Interview.id,
+                InterviewTurn.status.in_(("answered", "evaluated")),
+            )
+            .correlate(Interview)
+            .scalar_subquery()
+        )
+        rows = await self._session.execute(
+            select(Interview, answered.label("answered"))
+            .where(Interview.user_id == user_id)
+            .order_by(Interview.created_at.desc())
+            .limit(limit)
+        )
+        return [
+            InterviewSummaryOut(
+                id=interview.id,
+                role=interview.role,  # type: ignore[arg-type]
+                level=interview.level,  # type: ignore[arg-type]
+                type=interview.type,  # type: ignore[arg-type]
+                num_questions=interview.num_questions,
+                status=interview.status,  # type: ignore[arg-type]
+                overall_score=float(interview.overall_score)
+                if interview.overall_score is not None
+                else None,
+                answered=count,
+                created_at=interview.created_at,
+            )
+            for interview, count in rows
+        ]

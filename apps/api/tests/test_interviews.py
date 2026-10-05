@@ -11,7 +11,7 @@ from app.auth import CurrentUser, get_current_user
 from app.main import app
 from app.models import Interview, InterviewTurn
 from app.routers.interviews import get_interview_service
-from app.schemas.interviews import InterviewCreate
+from app.schemas.interviews import InterviewCreate, InterviewSummaryOut
 from app.services.interviews import InterviewWithTurns
 
 USER = CurrentUser(id=uuid.uuid4(), email="dev@example.com")
@@ -48,6 +48,23 @@ class FakeInterviewService:
         self.rows[row.id] = InterviewWithTurns(row, turns)
         return self.rows[row.id]
 
+    async def list(self, user_id: uuid.UUID, limit: int = 50) -> list[InterviewSummaryOut]:
+        return [
+            InterviewSummaryOut(
+                id=r.interview.id,
+                role=r.interview.role,
+                level=r.interview.level,
+                type=r.interview.type,
+                num_questions=r.interview.num_questions,
+                status=r.interview.status,
+                overall_score=None,
+                answered=0,
+                created_at=r.interview.created_at,
+            )
+            for r in self.rows.values()
+            if r.interview.user_id == user_id
+        ]
+
     async def get(self, user_id: uuid.UUID, interview_id: uuid.UUID) -> InterviewWithTurns | None:
         found = self.rows.get(interview_id)
         return found if found and found.interview.user_id == user_id else None
@@ -79,6 +96,7 @@ async def test_create_interview_returns_201(client: AsyncClient) -> None:
     assert [t["position"] for t in body["turns"]] == [1, 2, 3, 4, 5]
     # The grading key must never reach the browser
     assert all("ideal_points" not in t for t in body["turns"])
+    assert all(t["transcript"] is None for t in body["turns"])
 
 
 async def test_get_own_interview(client: AsyncClient) -> None:
@@ -130,3 +148,13 @@ def test_behavioral_role_accepts_behavioral_type() -> None:
     assert data.role == "behavioral"
     with pytest.raises(ValidationError):
         InterviewCreate.model_validate({**VALID, "role": "behavioral", "type": "mixed"})
+
+
+async def test_list_only_returns_own_interviews(
+    client: AsyncClient, service: FakeInterviewService
+) -> None:
+    await service.create(uuid.uuid4(), InterviewCreate.model_validate(VALID))
+    mine = (await client.post("/interviews", json=VALID)).json()
+    response = await client.get("/interviews")
+    assert response.status_code == 200
+    assert [row["id"] for row in response.json()] == [mine["id"]]

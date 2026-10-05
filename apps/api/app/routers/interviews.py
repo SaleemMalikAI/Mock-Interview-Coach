@@ -8,7 +8,12 @@ from app.auth import CurrentUserDep
 from app.config import get_settings
 from app.db import get_session
 from app.providers.factory import get_embedding_provider, get_llm_provider
-from app.schemas.interviews import InterviewCreate, InterviewOut, TurnOut
+from app.schemas.interviews import (
+    InterviewCreate,
+    InterviewOut,
+    InterviewSummaryOut,
+    TurnOut,
+)
 from app.services.interviews import InterviewService, InterviewWithTurns
 from app.services.question_bank import SqlQuestionBankRepository
 from app.services.question_plan import QuestionPlanner
@@ -42,6 +47,11 @@ async def create_interview(
     body: InterviewCreate, user: CurrentUserDep, service: ServiceDep
 ) -> InterviewOut:
     return to_out(await service.create(user.id, body))
+
+
+@router.get("")
+async def list_interviews(user: CurrentUserDep, service: ServiceDep) -> list[InterviewSummaryOut]:
+    return await service.list(user.id)
 
 
 @router.get("/{interview_id}")
