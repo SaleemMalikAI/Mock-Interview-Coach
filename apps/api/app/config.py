@@ -10,6 +10,8 @@ class Settings(BaseSettings):
 
     app_version: str = "0.1.0"
     cors_origins: list[str] = ["http://localhost:3000"]
+    # Optional regex for extra origins (e.g. Vercel preview URLs). Empty means none.
+    cors_origin_regex: str | None = None
     log_level: str = "INFO"
 
     # Provider selection (see app/providers/factory.py)
@@ -49,6 +51,11 @@ class Settings(BaseSettings):
 
     # Database (Supabase Postgres; the pooler connection string)
     database_url: SecretStr | None = None
+
+    @field_validator("cors_origin_regex", mode="before")
+    @classmethod
+    def empty_regex_is_none(cls, value: object) -> object:
+        return None if value == "" else value
 
     @field_validator("groq_reasoning_effort", mode="before")
     @classmethod

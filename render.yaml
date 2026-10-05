@@ -1,0 +1,48 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# New -> Blueprint -> pick this repo. Secrets marked `sync: false` are asked for once in the dashboard.
+services:
+  - type: web
+    name: mock-interview-api
+    runtime: docker
+    plan: free
+    # Closest Render region to the Supabase project (ap-south-1, Mumbai).
+    region: singapore
+    rootDir: apps/api
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - apps/api/**
+    envVars:
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LLM_PROVIDER
+        value: groq
+      - key: STT_PROVIDER
+        value: groq
+      - key: TTS_PROVIDER
+        value: groq
+      - key: EMBEDDING_PROVIDER
+        value: gemini
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_REASONING_EFFORT
+        value: low
+      - key: SUPABASE_URL
+        value: https://psgayxaehcsjhlnuzebi.supabase.co
+      - key: SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_q1BwE93r_cakX6y1lssM4w_ZPRWaYMM
+      # Secrets: entered in the Render dashboard, never committed.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      # JSON list, e.g. ["https://mock-interview-coach.vercel.app"]
+      - key: CORS_ORIGINS
+        sync: false
+      # Optional: allow Vercel preview deployments, e.g. ^https://mock-interview-coach-[a-z0-9-]+\.vercel\.app$
+      - key: CORS_ORIGIN_REGEX
+        sync: false
