@@ -7,9 +7,9 @@ import type { InterviewSummary } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
 import { INTERVIEW_TYPES, LEVELS, ROLES, labelFor } from "@/lib/interview-options";
 
-export function InterviewList({ interviews }: { interviews: InterviewSummary[] }) {
+export function InterviewList({ interviews, bare = false }: { interviews: InterviewSummary[]; bare?: boolean }) {
   return (
-    <ul className="divide-y overflow-hidden rounded-xl border bg-card shadow-[var(--shadow-soft)]">
+    <ul className={bare ? "divide-y" : "divide-y overflow-hidden rounded-xl border bg-card shadow-[var(--shadow-soft)]"}>
       {interviews.map((interview) => (
         <li key={interview.id}>
           <Link

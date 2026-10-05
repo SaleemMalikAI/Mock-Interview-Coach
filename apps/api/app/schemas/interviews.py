@@ -80,3 +80,9 @@ class InterviewSummaryOut(BaseModel):
     overall_score: float | None
     answered: int
     created_at: datetime
+
+
+class PracticeCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question_id: UUID

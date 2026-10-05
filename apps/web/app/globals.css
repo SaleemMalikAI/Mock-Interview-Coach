@@ -126,7 +126,8 @@
   --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.68 0.16 275);
-  --chart-1: oklch(0.68 0.16 275);
+  /* Chart bars: one step darker than --primary so it sits in the validated lightness band on dark cards. */
+  --chart-1: oklch(0.62 0.17 275);
   --chart-2: oklch(0.72 0.15 160);
   --chart-3: oklch(0.8 0.14 75);
   --chart-4: oklch(0.68 0.2 15);

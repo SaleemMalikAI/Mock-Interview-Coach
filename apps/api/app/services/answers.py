@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import CurrentUser
@@ -161,6 +161,7 @@ class AnswerService:
             round(transcript.duration_seconds, 2) if transcript.duration_seconds else None
         )
         turn.status = "answered"
+        turn.answered_at = func.now()
         await self._session.execute(
             update(Interview)
             .where(Interview.id == interview_id, Interview.status == "setup")

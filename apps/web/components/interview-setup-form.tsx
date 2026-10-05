@@ -126,7 +126,7 @@ export function InterviewSetupForm() {
         </div>
       </div>
 
-      <aside className="lg:sticky lg:top-24 lg:self-start">
+      <aside className="lg:sticky lg:top-20 lg:self-start">
         <div className="rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
           <div className="flex items-center gap-3">
             <span className="grid size-10 place-items-center rounded-lg bg-brand-subtle text-primary">

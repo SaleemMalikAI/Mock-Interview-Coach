@@ -66,4 +66,30 @@ class InterviewTurn(Base):
     metrics: Mapped[dict | None] = mapped_column(JSONB)
     scores: Mapped[dict | None] = mapped_column(JSONB)
     feedback: Mapped[dict | None] = mapped_column(JSONB)
+    answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class StarStory(Base):
+    """Mirrors public.star_stories (F13)."""
+
+    __tablename__ = "star_stories"
+    __table_args__ = {"schema": "public"}
+
+    id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True))
+    title: Mapped[str] = mapped_column(Text)
+    situation: Mapped[str] = mapped_column(Text, default="")
+    task: Mapped[str] = mapped_column(Text, default="")
+    action: Mapped[str] = mapped_column(Text, default="")
+    result: Mapped[str] = mapped_column(Text, default="")
+    tags: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

@@ -14,10 +14,10 @@ Claude updates this at the end of every feature. Newest entry on top.
 | F8 Final report | ⬜ | |
 | F9 Dashboard | ⬜ | |
 | F10 Limits & polish | ⬜ | |
-| F11 Progress & habits | ⬜ | Added 2026-10-05; after F4–F10 |
+| F11 Progress & habits | 🟨 | Sidebar shell, history with filters, streak, weekly minutes, 14-day activity chart, weekly goal done; skills breakdown + PDF report wait for F7/F8 |
 | F12 Resume & cover letter | ⬜ | Added 2026-10-05; after F4–F10 |
-| F13 STAR stories & learning | ⬜ | Added 2026-10-05; after F4–F10 |
-| F14 Question bank browser | ⬜ | Added 2026-10-05; after F4–F10 |
+| F13 STAR stories & learning | 🟨 | STAR story CRUD done; AI story review + learning journey wait for F7 |
+| F14 Question bank browser | ✅ | Search + role/level filters, "Practice" creates a 1-question interview |
 
 Status: ⬜ not started · 🟨 in progress · ✅ done
 
@@ -55,6 +55,10 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - UI design system (2026-10-05 redesign): indigo brand, emerald success, amber warning, rose recording as oklch tokens with light/dark pairs in `globals.css`; Geist Sans/Mono; 44px+ touch targets (button `default` h-10, `lg` h-11, `xl` h-14); one shadow scale (`--shadow-soft`, `--shadow-lift`); Lucide icons only; dark mode via next-themes.
 - Pages behind auth live in the `app/(app)` route group, whose layout renders the sticky header (logo, nav with active state, theme toggle, user menu). URLs are unchanged.
 - Product name in the UI is "Mock Interview Coach". "InterviewCoach" was avoided because it is another company's brand (InterviewCoach.AI).
+- User asked to build the full sidebar dashboard before scoring (overriding "core first" for the shell). Pages whose AI parts need F7 (Documents, Learning journey) show an honest "In development" page instead of fake data.
+- Streaks and weekly minutes use the browser's IANA timezone (stored in a `tz` cookie, validated server-side, UTC fallback) and `interview_turns.answered_at`.
+- Filters and search on history/question bank are server-rendered links and GET forms: shareable URLs, no client JS needed.
+- Chart colour validated with the dataviz palette validator; dark mode uses its own chart step (`--chart-1` L 0.62) because the button primary (L 0.68) fails the dark lightness band.
 - Request-id middleware sets an `x-request-id` header and a log context var, which covers the structured-logging rule from the start.
 
 ## Known issues
@@ -74,6 +78,11 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - Not deployed yet (Vercel for `apps/web`, Railway for `apps/api`).
 
 ## Log
+### 2026-10-05: Sidebar dashboard (F11 shell, F13 stories, F14 bank)
+- Migration `20261005150000_dashboard_practice_stories.sql`: `interview_turns.answered_at`, `num_questions` allows 1, `star_stories` with RLS.
+- API: `GET /stats` (streak, longest streak, week/total minutes, 14-day activity, averages), `GET /questions` (search + filters + topics), `POST /interviews/practice`, `/stories` CRUD (max 50). 90 tests pass.
+- Web: sidebar layout (desktop fixed sidebar, mobile drawer), dashboard (profile hero, 4 KPIs, activity chart with tooltips + sr-only table, weekly goal ring, recent interviews, continue card, quick links), history, question bank, STAR stories (dialog editor, delete confirmation), documents and learning placeholders. Tighter full-width layout after feedback.
+- Verified in Chrome (fake mic): practice → answer → stats update; story create/edit/delete; filters; drawer navigation; 360 and 1600 px with no overflow and no console errors.
 ### 2026-10-05: UI redesign + F5 recorder
 - Redesigned landing (hero with product preview, how it works, features, CTA), login (brand panel + form, Google "G" mark), dashboard (stats, real interview list via new `GET /interviews`, empty/loading/error states), setup (role cards with icons, segmented options, JD counter, sticky summary), room (progress, question card, recorder, transcript card, question stepper), 404 and room error page.
 - `hooks/use-recorder.ts` (MediaRecorder, AnalyserNode meter, silence detection, 3-min cap, permission/no-mic/unsupported errors), `AnswerRecorder`, `TranscriptCard`, `QuestionSteps`, `InterviewRoom`. Turns now return the user's own transcript.

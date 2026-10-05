@@ -47,6 +47,9 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   if (!res.ok) {
     throw await errorFrom(res, path);
   }
+  if (res.status === 204) {
+    return undefined as T;
+  }
   return (await res.json()) as T;
 }
 
@@ -112,3 +115,43 @@ export type HealthResponse = { status: "ok"; version: string };
 export function getHealth(): Promise<HealthResponse> {
   return apiFetch<HealthResponse>("/health", { cache: "no-store" });
 }
+
+export type DayActivity = { day: string; answers: number; minutes: number };
+
+export type Stats = {
+  interviews: number;
+  completed: number;
+  answered: number;
+  average_score: number | null;
+  best_score: number | null;
+  current_streak: number;
+  longest_streak: number;
+  week_minutes: number;
+  total_minutes: number;
+  activity: DayActivity[];
+};
+
+export type BankQuestion = {
+  id: string;
+  role: Interview["role"];
+  level: Interview["level"];
+  type: "technical" | "behavioral";
+  topic: string;
+  question: string;
+};
+
+export type QuestionPage = { items: BankQuestion[]; total: number; topics: string[] };
+
+export type StarStory = {
+  id: string;
+  title: string;
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type StoryInput = Pick<StarStory, "title" | "situation" | "task" | "action" | "result" | "tags">;

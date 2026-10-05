@@ -12,6 +12,7 @@ from app.schemas.interviews import (
     InterviewCreate,
     InterviewOut,
     InterviewSummaryOut,
+    PracticeCreate,
     TurnOut,
 )
 from app.services.interviews import InterviewService, InterviewWithTurns
@@ -47,6 +48,16 @@ async def create_interview(
     body: InterviewCreate, user: CurrentUserDep, service: ServiceDep
 ) -> InterviewOut:
     return to_out(await service.create(user.id, body))
+
+
+@router.post("/practice", status_code=status.HTTP_201_CREATED)
+async def create_practice_interview(
+    body: PracticeCreate, user: CurrentUserDep, service: ServiceDep
+) -> InterviewOut:
+    result = await service.create_practice(user.id, body.question_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
+    return to_out(result)
 
 
 @router.get("")

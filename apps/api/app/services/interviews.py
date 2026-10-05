@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Interview, InterviewTurn
 from app.schemas.interviews import InterviewCreate, InterviewSummaryOut
-from app.services.question_plan import QuestionPlanner
+from app.services.question_plan import PlannedQuestion, QuestionPlanner
+from app.services.questions import QuestionService
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,31 @@ class InterviewService:
     async def create(self, user_id: UUID, data: InterviewCreate) -> InterviewWithTurns:
         # Build the plan before opening the write transaction: it calls external providers.
         plan = await self._planner.build(data)
+        return await self._save(
+            user_id, Interview(id=uuid4(), user_id=user_id, **data.model_dump()), plan
+        )
 
-        interview = Interview(id=uuid4(), user_id=user_id, **data.model_dump())
+    async def create_practice(self, user_id: UUID, question_id: UUID) -> InterviewWithTurns | None:
+        """F14: a one-question interview from the bank, using the normal room and scoring."""
+        found = await QuestionService(self._session).get_with_points(question_id)
+        if found is None:
+            return None
+        question, ideal_points = found
+        interview = Interview(
+            id=uuid4(),
+            user_id=user_id,
+            role=question.role,
+            level=question.level,
+            type="behavioral" if question.type == "behavioral" else "technical",
+            num_questions=1,
+            job_description=None,
+        )
+        plan = [PlannedQuestion(question.question, ideal_points, "bank", question.id)]
+        return await self._save(user_id, interview, plan)
+
+    async def _save(
+        self, user_id: UUID, interview: Interview, plan: list[PlannedQuestion]
+    ) -> InterviewWithTurns:
         turns = [
             InterviewTurn(
                 interview_id=interview.id,
@@ -50,9 +74,9 @@ class InterviewService:
         logger.info(
             "interview %s created (%s/%s/%s) with %d turns",
             interview.id,
-            data.role,
-            data.level,
-            data.type,
+            interview.role,
+            interview.level,
+            interview.type,
             len(turns),
         )
         return InterviewWithTurns(interview, turns)

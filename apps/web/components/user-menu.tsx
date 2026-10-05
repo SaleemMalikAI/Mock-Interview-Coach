@@ -14,16 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { displayName, initialsOf } from "@/lib/format";
 
-type UserMenuProps = { email: string };
+type UserMenuProps = { email: string; align?: "start" | "end" };
 
-function initials(email: string): string {
-  const name = email.split("@")[0] ?? "";
-  const parts = name.split(/[._-]+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "")).toUpperCase() || "?";
-}
-
-export function UserMenu({ email }: UserMenuProps) {
+export function UserMenu({ email, align = "end" }: UserMenuProps) {
   const router = useRouter();
   const signOutForm = useRef<HTMLFormElement>(null);
 
@@ -36,10 +31,10 @@ export function UserMenu({ email }: UserMenuProps) {
           className="cursor-pointer rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <Avatar className="size-9 ring-1 ring-border">
-            <AvatarFallback className="bg-brand-subtle text-xs font-semibold text-primary">{initials(email)}</AvatarFallback>
+            <AvatarFallback className="bg-brand-subtle text-xs font-semibold text-primary">{initialsOf(displayName(email))}</AvatarFallback>
           </Avatar>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-60">
+        <DropdownMenuContent align={align} className="w-60">
           <DropdownMenuGroup>
             <DropdownMenuLabel className="font-normal">
               <span className="block text-xs text-muted-foreground">Signed in as</span>
