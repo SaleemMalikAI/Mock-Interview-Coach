@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from collections.abc import AsyncIterator
 
 from google import genai
@@ -10,8 +12,13 @@ _TASK_TYPES: dict[EmbeddingTask, str] = {
     "document": "RETRIEVAL_DOCUMENT",
     "query": "RETRIEVAL_QUERY",
 }
-# The embed endpoint accepts at most 100 inputs per request.
-_EMBED_BATCH_SIZE = 100
+# The free tier counts each input as a request (100/min), so keep batches small
+# and wait out 429s instead of failing the whole run.
+_EMBED_BATCH_SIZE = 50
+_RATE_LIMIT_RETRIES = 3
+_RATE_LIMIT_WAIT_SECONDS = 30
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiLLM(LLMProvider):
@@ -80,17 +87,7 @@ class GeminiLLM(LLMProvider):
         vectors: list[list[float]] = []
         for start in range(0, len(texts), _EMBED_BATCH_SIZE):
             batch = texts[start : start + _EMBED_BATCH_SIZE]
-            try:
-                response = await self._client.aio.models.embed_content(
-                    model=self._embedding_model,
-                    contents=batch,
-                    config=types.EmbedContentConfig(
-                        task_type=_TASK_TYPES[task],
-                        output_dimensionality=self._embedding_dimensions,
-                    ),
-                )
-            except errors.APIError as exc:
-                raise ProviderError(f"gemini embed_content failed: {exc}") from exc
+            response = await self._embed_batch(batch, task)
             embeddings = response.embeddings or []
             if len(embeddings) != len(batch):
                 raise ProviderError(
@@ -98,3 +95,26 @@ class GeminiLLM(LLMProvider):
                 )
             vectors.extend(list(e.values or []) for e in embeddings)
         return vectors
+
+    async def _embed_batch(
+        self, batch: list[str], task: EmbeddingTask
+    ) -> types.EmbedContentResponse:
+        config = types.EmbedContentConfig(
+            task_type=_TASK_TYPES[task], output_dimensionality=self._embedding_dimensions
+        )
+        for attempt in range(_RATE_LIMIT_RETRIES + 1):
+            try:
+                return await self._client.aio.models.embed_content(
+                    model=self._embedding_model, contents=batch, config=config
+                )
+            except errors.APIError as exc:
+                if exc.code != 429 or attempt == _RATE_LIMIT_RETRIES:
+                    raise ProviderError(f"gemini embed_content failed: {exc}") from exc
+                logger.warning(
+                    "gemini embed rate-limited, retrying in %ds (attempt %d/%d)",
+                    _RATE_LIMIT_WAIT_SECONDS,
+                    attempt + 1,
+                    _RATE_LIMIT_RETRIES,
+                )
+                await asyncio.sleep(_RATE_LIMIT_WAIT_SECONDS)
+        raise AssertionError("unreachable")

@@ -31,7 +31,6 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 ## Known issues
 - Supabase MCP is connected. context7, playwright and `.claude/` (`/feature`) from the kit are still missing.
 - The Gemini key's Google Cloud project has **0 quota for generate_content** on every model (429, `quota_limit_value: 0`). Embeddings work. This must be fixed before F3 (JD questions) and F7 (evaluation): create the key in Google AI Studio on a project with free tier, or enable billing.
-- `question_bank` isn't seeded yet: waiting on `DATABASE_URL` in `apps/api/.env`.
 - STT and TTS providers are interfaces only; implementations come in F5 and F4.
 - Not deployed yet (Vercel for `apps/web`, Railway for `apps/api`).
 
@@ -41,6 +40,9 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - `app/providers/base.py` (LLM, STT, TTS interfaces + typed errors), `providers/gemini.py`, `providers/factory.py` (env-based selection), `app/db.py` (async engine, pooler-safe).
 - `scripts/seed_questions.py` + 100 questions (25 per role, junior/mid/senior). `--dry-run` validates the file.
 - `apps/web/lib/database.types.ts` generated via MCP.
+- Seeded: 100 rows (25 per role), all with 768-dim embeddings; a vector similarity check returns related questions (RAG → RAG questions, 0.87–0.90).
+- `DATABASE_URL` must use the pooler host (`aws-0-ap-south-1.pooler.supabase.com:6543`, user `postgres.<ref>`). The direct `db.<ref>` host is IPv6-only and unreachable here.
+- Gemini embed calls retry on 429 (free tier: 100 inputs/min) with batches of 50.
 - Tests: 6 pass (health, generate_json retry/typed error, seed data shape). Live check: Gemini embeddings return 768 dims.
 ### 2026-10-05: Day 1 scaffold
 - `apps/web`: Next.js 16 + TypeScript strict + Tailwind 4 + shadcn/ui, a `typecheck` script, and `lib/api.ts` (single fetch wrapper with Bearer-token support). The home page shows API health.
