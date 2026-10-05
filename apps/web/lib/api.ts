@@ -34,6 +34,21 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   return (await res.json()) as T;
 }
 
+export type Interview = {
+  id: string;
+  role: "frontend" | "full_stack" | "ai_engineer" | "behavioral";
+  level: "junior" | "mid" | "senior";
+  type: "technical" | "behavioral" | "mixed";
+  num_questions: number;
+  job_description: string | null;
+  status: "setup" | "in_progress" | "completed" | "abandoned";
+  overall_score: number | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+export type CreateInterviewInput = Pick<Interview, "role" | "level" | "type" | "num_questions" | "job_description">;
+
 export type MeResponse = { id: string; email: string | null };
 
 export type HealthResponse = { status: "ok"; version: string };

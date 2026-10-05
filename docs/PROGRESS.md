@@ -5,7 +5,7 @@ Claude updates this at the end of every feature. Newest entry on top.
 | Feature | Status | Notes |
 |---|---|---|
 | F1 Auth | ✅ | Magic link + Google (Google needs OAuth client in dashboard), proxy guards, FastAPI JWKS verification |
-| F2 Interview setup | ⬜ | |
+| F2 Interview setup | ✅ | `/interview/new` → `POST /interviews` → redirect to `/interview/[id]` (room placeholder) |
 | F3 Question plan (RAG) | ⬜ | |
 | F4 Interview room | ⬜ | |
 | F5 Transcription | ⬜ | |
@@ -32,6 +32,10 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - `?next=` is restricted to same-site relative paths (`lib/safe-redirect.ts`) to prevent open redirects.
 - Route handlers redirect with a relative `Location` header: inside Docker, `request.nextUrl` reports the bind host `0.0.0.0`.
 - shadcn here is the Base UI flavor (`base-nova`): `Button` has no `asChild`. Use `buttonVariants()` on a `Link` instead.
+- Interviews are created through FastAPI (`POST /interviews`), not directly from the browser via Supabase, so F3 can build the question plan in the same request later. The web side uses a Server Action that forwards the session token; the form keeps working without client-side fetch code.
+- `role=behavioral` only allows `type=behavioral`: enforced in the Pydantic schema (422) and in the UI (other types disabled).
+- Other users' interviews return 404, not 403, so ids can't be probed.
+- Base UI radios put the `id` on a hidden native input; use `label[for=...]` or `aria-checked` on the visible span when testing.
 - Request-id middleware sets an `x-request-id` header and a log context var, which covers the structured-logging rule from the start.
 
 ## Known issues
@@ -42,10 +46,14 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - Supabase Auth URL config must allow `http://localhost:3000/**` as a redirect URL, or magic links fall back to the Site URL and skip `/auth/callback` (dashboard setting, not available via MCP).
 - Google sign-in needs a Google OAuth client ID/secret set in Supabase → Authentication → Providers → Google.
 - The default Supabase email sender is heavily rate-limited (a few emails per hour). Add custom SMTP (e.g. Resend) before demos.
-- Not checked with the playwright MCP (not installed); verified with curl and a real session instead.
+- No playwright MCP; UI checks use `@playwright/test` with system Chrome (`channel: "chrome"`) from ad-hoc scripts until the Day 9 e2e suite exists.
 - Not deployed yet (Vercel for `apps/web`, Railway for `apps/api`).
 
 ## Log
+### 2026-10-05: F2 Interview setup
+- API: `models.py` (`Interview`), `schemas/interviews.py`, `services/interviews.py` (always scoped by `user_id`), `routers/interviews.py` (`POST /interviews`, `GET /interviews/{id}`), `db.get_session`. 13 new tests (26 total): create, own vs other user's interview, 7 invalid payloads, auth required, validators.
+- Web: `/interview/new` with `OptionGroup` radio cards, job description counter (5,000 cap), Server Action with pending and error states; `/interview/[id]` placeholder room (404 for unknown or foreign ids); "New interview" on the dashboard.
+- Verified in Chrome at 360px with a temporary user (deleted afterwards): no horizontal overflow, behavioral role locks the type, submit redirects to the room, the DB row matches the input, unknown id → 404.
 ### 2026-10-05: F1 Auth
 - Web: `@supabase/ssr` clients (`lib/supabase/{client,server,proxy}.ts`), `proxy.ts`, `/login` (Google + magic link, loading and error states, toasts), `/auth/callback` (PKCE code exchange), `/auth/signout` (POST), `/dashboard` placeholder that calls FastAPI `/me` with the session token.
 - API: `app/auth.py` (`get_current_user` / `CurrentUserDep`), `GET /me`. 7 new tests: valid, missing, expired, wrong audience, wrong issuer, wrong key, malformed.

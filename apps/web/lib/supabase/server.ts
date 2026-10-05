@@ -24,3 +24,10 @@ export async function createClient() {
     },
   });
 }
+
+/** Access token for forwarding to FastAPI, which verifies it itself. */
+export async function getAccessToken(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}

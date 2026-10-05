@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+
+import { Button, buttonVariants } from "@/components/ui/button";
 import { apiFetch, type MeResponse } from "@/lib/api";
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,11 +31,16 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Signed in as {data.claims.email ?? "unknown"}</p>
         </div>
-        <form action="/auth/signout" method="post">
-          <Button type="submit" variant="outline">
-            Sign out
-          </Button>
-        </form>
+        <div className="flex gap-2">
+          <Link href="/interview/new" className={buttonVariants()}>
+            New interview
+          </Link>
+          <form action="/auth/signout" method="post">
+            <Button type="submit" variant="outline">
+              Sign out
+            </Button>
+          </form>
+        </div>
       </div>
 
       <p className="text-sm text-muted-foreground">
