@@ -21,10 +21,11 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - Next.js 16.3 (create-next-app latest) instead of 15. It satisfies the "15+" rule. Its breaking-change docs ship in `apps/web/node_modules/next/dist/docs/` (see `apps/web/AGENTS.md`).
 - The API is a uv app (`package = false`), not a package, so `uvicorn app.main:app` works from `apps/api`.
 - `docker compose up` runs both apps for local dev with bind mounts and hot reload. Inside compose, server-side fetches use `API_URL_INTERNAL=http://api:8000`, and the browser uses `NEXT_PUBLIC_API_URL`.
+- Supabase dev project `mock-interview-dev` (ref `psgayxaehcsjhlnuzebi`, region ap-south-1). The web app uses the new publishable key (`sb_publishable_...`) instead of the legacy anon JWT. `.mcp.json` is scoped to this project.
 - Request-id middleware sets an `x-request-id` header and a log context var, which covers the structured-logging rule from the start.
 
 ## Known issues
-- The project MCP config (`.mcp.json`) and `.claude/` from the kit are not in the repo yet, so context7, supabase, playwright and the `/feature` command are unavailable.
+- Supabase MCP is connected. context7, playwright and `.claude/` (`/feature`) from the kit are still missing.
 - Not deployed yet (Vercel for `apps/web`, Railway for `apps/api`).
 
 ## Log
