@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.logging_config import configure_logging, request_id_var
-from app.routers import health
+from app.routers import health, me
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -49,3 +49,4 @@ async def request_context(
 
 
 app.include_router(health.router)
+app.include_router(me.router)

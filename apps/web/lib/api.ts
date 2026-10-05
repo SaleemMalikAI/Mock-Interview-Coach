@@ -34,6 +34,8 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   return (await res.json()) as T;
 }
 
+export type MeResponse = { id: string; email: string | null };
+
 export type HealthResponse = { status: "ok"; version: string };
 
 export function getHealth(): Promise<HealthResponse> {

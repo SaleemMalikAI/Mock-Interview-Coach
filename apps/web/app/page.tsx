@@ -1,3 +1,6 @@
+import Link from "next/link";
+
+import { buttonVariants } from "@/components/ui/button";
 import { getHealth } from "@/lib/api";
 
 async function ApiStatus() {
@@ -24,6 +27,9 @@ export default function Home() {
       <p className="text-muted-foreground">
         Practice interviews out loud. Get scored feedback and speech metrics on every answer.
       </p>
+      <Link href="/dashboard" className={buttonVariants({ size: "lg" })}>
+        Get started
+      </Link>
       <ApiStatus />
     </main>
   );

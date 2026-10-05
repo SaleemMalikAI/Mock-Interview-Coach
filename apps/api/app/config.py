@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # Must match the vector(768) column in question_bank
     embedding_dimensions: int = 768
 
+    # Supabase project URL; access tokens are verified against its JWKS
+    supabase_url: str = ""
+
     # Database (Supabase Postgres; the pooler connection string)
     database_url: SecretStr | None = None
 

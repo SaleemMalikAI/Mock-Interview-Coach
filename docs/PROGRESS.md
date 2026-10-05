@@ -4,7 +4,7 @@ Claude updates this at the end of every feature. Newest entry on top.
 
 | Feature | Status | Notes |
 |---|---|---|
-| F1 Auth | ⬜ | |
+| F1 Auth | ✅ | Magic link + Google (Google needs OAuth client in dashboard), proxy guards, FastAPI JWKS verification |
 | F2 Interview setup | ⬜ | |
 | F3 Question plan (RAG) | ⬜ | |
 | F4 Interview room | ⬜ | |
@@ -27,6 +27,11 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - `generate_json` retry-once logic lives in `LLMProvider` (base class), so every provider gets the same validation and `InvalidLLMOutputError` behavior.
 - FastAPI connects to Postgres directly (`DATABASE_URL`, transaction pooler) and bypasses RLS. Services must always filter by `user_id`. RLS protects any direct client access.
 - Question bank lives in `apps/api/scripts/data/questions.json` (100 hand-written questions); the seed script embeds `topic + question + ideal_points` and upserts on `question`.
+- Auth tokens are verified in FastAPI against the project JWKS (`/auth/v1/.well-known/jwks.json`, ES256) with PyJWT, checking `aud=authenticated` and `iss`. No JWT secret needed; `SUPABASE_JWT_SECRET` dropped.
+- Next 16 uses `proxy.ts` (formerly middleware). It refreshes the Supabase session with `getClaims()` and redirects logged-out users from `/dashboard` and `/interview/*` to `/login?next=...`. Pages also check `getClaims()` themselves, so a matcher mistake can't expose data.
+- `?next=` is restricted to same-site relative paths (`lib/safe-redirect.ts`) to prevent open redirects.
+- Route handlers redirect with a relative `Location` header: inside Docker, `request.nextUrl` reports the bind host `0.0.0.0`.
+- shadcn here is the Base UI flavor (`base-nova`): `Button` has no `asChild`. Use `buttonVariants()` on a `Link` instead.
 - Request-id middleware sets an `x-request-id` header and a log context var, which covers the structured-logging rule from the start.
 
 ## Known issues
@@ -34,9 +39,17 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - The Gemini key has 0 quota for text generation (embeddings work). Not a blocker since the LLM moved to Groq; `GeminiLLM` stays available via `LLM_PROVIDER=gemini` if the quota is fixed.
 - The Groq key was pasted in chat once; rotate it in the Groq console when convenient.
 - STT and TTS providers are interfaces only; implementations come in F5 and F4.
+- Supabase Auth URL config must allow `http://localhost:3000/**` as a redirect URL, or magic links fall back to the Site URL and skip `/auth/callback` (dashboard setting, not available via MCP).
+- Google sign-in needs a Google OAuth client ID/secret set in Supabase → Authentication → Providers → Google.
+- The default Supabase email sender is heavily rate-limited (a few emails per hour). Add custom SMTP (e.g. Resend) before demos.
+- Not checked with the playwright MCP (not installed); verified with curl and a real session instead.
 - Not deployed yet (Vercel for `apps/web`, Railway for `apps/api`).
 
 ## Log
+### 2026-10-05: F1 Auth
+- Web: `@supabase/ssr` clients (`lib/supabase/{client,server,proxy}.ts`), `proxy.ts`, `/login` (Google + magic link, loading and error states, toasts), `/auth/callback` (PKCE code exchange), `/auth/signout` (POST), `/dashboard` placeholder that calls FastAPI `/me` with the session token.
+- API: `app/auth.py` (`get_current_user` / `CurrentUserDep`), `GET /me`. 7 new tests: valid, missing, expired, wrong audience, wrong issuer, wrong key, malformed.
+- Verified end to end with a temporary dev user (deleted afterwards): `/me` returns the user, the dashboard renders with "verified", `/login` redirects signed-in users, and logged-out users are redirected from `/dashboard` and `/interview/*`. RLS via REST: own insert 201, insert for another user 42501, anon sees nothing, authenticated sees all 100 bank questions.
 ### 2026-10-05: Day 2 database + providers
 - Migration `supabase/migrations/20261005090000_init_schema.sql` applied via MCP: `question_bank` (pgvector 768 + HNSW cosine index), `interviews`, `interview_turns`, all with RLS. Security advisor: no issues. RLS checked: anon sees nothing, authenticated can read the bank but no other users' interviews.
 - `app/providers/base.py` (LLM, STT, TTS interfaces + typed errors), `providers/gemini.py`, `providers/factory.py` (env-based selection), `app/db.py` (async engine, pooler-safe).
