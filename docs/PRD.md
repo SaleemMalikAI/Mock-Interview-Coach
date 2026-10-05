@@ -69,6 +69,35 @@ Each feature has an ID. Use these IDs in prompts, commits and PROGRESS.md.
 
 ---
 
+## Extended features (added 2026-10-05, built after F4–F10)
+
+### F11 — Progress & habits
+- Sidebar navigation on desktop (collapsible to a top bar on mobile): Dashboard, Start interview, History, Question bank, Documents, STAR stories, Learning.
+- Interview history page with filters (role, status, date) and search.
+- Practice streak (consecutive days with at least one answered question) and weekly practice minutes (sum of answer durations).
+- Skills breakdown: average of each rubric dimension across all scored answers, plus per-topic averages.
+- Download the final report (F8) as a PDF.
+- **Done when:** streak and weekly minutes match the data after answering on two different days, and the PDF report downloads with all report sections.
+
+### F12 — Resume & cover letter
+- Upload a resume and an optional cover letter (PDF or DOCX, max 5 MB) into a private bucket; extract the text on the server.
+- Score each document against a job description with a rubric (impact, relevance to the JD, clarity, keywords/ATS readiness, formatting), with strengths and concrete fixes. Treat document text like the JD: untrusted, wrapped in tags.
+- Interview setup can use the resume to add 1–2 questions about the candidate's own projects.
+- **Done when:** a resume uploads, shows a score with feedback in under 15 seconds, and a new interview can include resume-based questions.
+
+### F13 — STAR stories & learning journey
+- STAR story bank: create, edit and tag stories (Situation, Task, Action, Result); the LLM reviews a story for completeness and gives fixes.
+- Behavioral feedback (F7) points to a matching saved story when one exists.
+- Learning journey: recommended topics and questions from the weakest rubric dimensions and topics, with progress as they improve.
+- **Done when:** a user can save a story and get a review, and the learning page recommends at least 3 items based on real scores.
+
+### F14 — Question bank browser
+- Browse and search all `question_bank` questions by role, level, type and topic.
+- Practice any single question on demand (creates a 1-question interview using the normal room, scoring and report).
+- **Done when:** search returns matches in under 300 ms and "Practice this question" opens the room with that question.
+
+---
+
 ## v2 (after you're hired, or if time allows)
 - Adaptive follow-up questions based on the previous answer
 - Resume upload, so questions are tailored to your projects

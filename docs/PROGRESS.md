@@ -14,10 +14,15 @@ Claude updates this at the end of every feature. Newest entry on top.
 | F8 Final report | ⬜ | |
 | F9 Dashboard | ⬜ | |
 | F10 Limits & polish | ⬜ | |
+| F11 Progress & habits | ⬜ | Added 2026-10-05; after F4–F10 |
+| F12 Resume & cover letter | ⬜ | Added 2026-10-05; after F4–F10 |
+| F13 STAR stories & learning | ⬜ | Added 2026-10-05; after F4–F10 |
+| F14 Question bank browser | ⬜ | Added 2026-10-05; after F4–F10 |
 
 Status: ⬜ not started · 🟨 in progress · ✅ done
 
 ## Decisions
+- Scope extended with F11–F14 (inspired by InterviewCoach.AI's feature set), built after the core F4–F10 because their widgets depend on F7 scores. "Talk to experts" and "Jobs" were left out: they need human experts / a job board, not this app.
 - Next.js 16.3 (create-next-app latest) instead of 15. It satisfies the "15+" rule. Its breaking-change docs ship in `apps/web/node_modules/next/dist/docs/` (see `apps/web/AGENTS.md`).
 - The API is a uv app (`package = false`), not a package, so `uvicorn app.main:app` works from `apps/api`.
 - `docker compose up` runs both apps for local dev with bind mounts and hot reload. Inside compose, server-side fetches use `API_URL_INTERNAL=http://api:8000`, and the browser uses `NEXT_PUBLIC_API_URL`.
