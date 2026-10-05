@@ -59,7 +59,10 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - Streaks and weekly minutes use the browser's IANA timezone (stored in a `tz` cookie, validated server-side, UTC fallback) and `interview_turns.answered_at`.
 - Filters and search on history/question bank are server-rendered links and GET forms: shareable URLs, no client JS needed.
 - Chart colour validated with the dataviz palette validator; dark mode uses its own chart step (`--chart-1` L 0.62) because the button primary (L 0.68) fails the dark lightness band.
-- Deployment: web on Vercel (project `mock-interview-coach`, root `apps/web`, auto-deploys on push to `main`, production URL https://mock-interview-coach-rust.vercel.app — `mock-interview-coach.vercel.app` belongs to someone else). API on Render free plan via `render.yaml` (Docker, Singapore, closest to Supabase Mumbai), production image `apps/api/Dockerfile` (no dev deps, non-root, `$PORT`).
+- Deployment: both apps on Vercel, auto-deployed on push to `main`; each project's `ignoreCommand` skips builds when its folder didn't change.
+  - Web: project `mock-interview-coach`, root `apps/web`, https://mock-interview-coach-rust.vercel.app (`mock-interview-coach.vercel.app` belongs to someone else).
+  - API: project `mock-interview-api`, root `apps/api`, https://mock-interview-api.vercel.app, Python Fluid Compute pinned to `bom1` (Mumbai, next to Supabase ap-south-1), entrypoint `apps/api/index.py`. Doesn't sleep like Render's free plan.
+  - Render was dropped because it required a card even for the free plan. `apps/api/Dockerfile` (production image) is kept for any container host.
 - With Vercel's root directory set to `apps/web`, deploy by pushing to `main` (or run `vercel` from the repo root), not from inside `apps/web`.
 - Request-id middleware sets an `x-request-id` header and a log context var, which covers the structured-logging rule from the start.
 
@@ -77,7 +80,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - Groq TTS (`canopylabs/orpheus-v1-english`) needs its terms accepted once in the Groq console before F4 can use it.
 - Security advisor: "leaked password protection disabled" — not relevant while sign-in is magic link + Google only.
 - `globals.css` from `shadcn init` had `--font-sans: var(--font-sans)` (self-reference), so the app rendered in the browser's serif font until the redesign fixed it.
-- API on Render free plan sleeps after ~15 min idle; first request after that takes 30–60 s (accepted by the user).
+- Vercel Hobby limits: 300 s per request (fine for STT/LLM calls); request bodies up to 100 MB on Fluid Compute, so the 10 MB answer limit is unchanged.
 
 ## Log
 ### 2026-10-05: Sidebar dashboard (F11 shell, F13 stories, F14 bank)
