@@ -9,7 +9,7 @@ from uuid import UUID
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.config import get_settings
 
@@ -23,6 +23,8 @@ _AUDIENCE = "authenticated"
 class CurrentUser(BaseModel):
     id: UUID
     email: str | None = None
+    # The raw JWT, for calls that must run as the user (Storage with RLS). Never serialized.
+    access_token: str = Field(default="", exclude=True, repr=False)
 
 
 def _issuer() -> str:
@@ -73,7 +75,7 @@ async def get_current_user(
     except jwt.PyJWTError as exc:
         raise _unauthorized("Invalid token") from exc
 
-    return CurrentUser(id=claims["sub"], email=claims.get("email"))
+    return CurrentUser(id=claims["sub"], email=claims.get("email"), access_token=token)
 
 
 CurrentUserDep = Annotated[CurrentUser, Depends(get_current_user)]

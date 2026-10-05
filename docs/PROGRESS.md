@@ -8,7 +8,7 @@ Claude updates this at the end of every feature. Newest entry on top.
 | F2 Interview setup | ✅ | `/interview/new` → `POST /interviews` → redirect to `/interview/[id]` (room placeholder) |
 | F3 Question plan (RAG) | ✅ | Built inside `POST /interviews`; ~2.5–2.9 s planning, 4.1–4.7 s per request from Pakistan to the Mumbai DB |
 | F4 Interview room | ⬜ | |
-| F5 Transcription | ⬜ | |
+| F5 Transcription | 🟨 | API done (`POST /interviews/{id}/turns/{turn_id}/answer`); recorder UI next, after the UI redesign |
 | F6 Speech metrics | ⬜ | |
 | F7 Answer evaluation | ⬜ | |
 | F8 Final report | ⬜ | |
@@ -43,6 +43,10 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - `ideal_points` are stored on turns but never returned by the API (grading key).
 - Groq `reasoning_effort=low` (`GROQ_REASONING_EFFORT`): JD generation ~3.0 s → ~1.4 s with equal quality.
 - DB round trips are ~160 ms from local dev to the Mumbai pooler, so the code minimizes them: `eager_defaults` + client-side UUIDs (no refresh queries), one bank query for both pools, and a startup warm-up (DB connection + JWKS). Deploy the API in or near `ap-south-1`.
+- F5 audio goes to the private `answer-audio` bucket at `<user_id>/<interview_id>/<turn_id>.<ext>`. The API calls Storage with the **user's own JWT** + publishable key, so storage RLS (own folder only) does the scoping; no service-role key in the API. Rejected answers are deleted again.
+- Whisper (`whisper-large-v3-turbo` on Groq) is prompted with filler words so it keeps "um/uh/like" for F6. It hallucinates "Thank you." on silence and `no_speech_prob` doesn't flag it, so transcripts made only of known filler phrases are treated as `empty_audio` (the recorder will also check mic level client-side).
+- Answer errors return `{"detail": {"code", "message"}}` with codes `not_found` 404, `already_evaluated` 409, `unsupported_type` 415, `too_large` 413, `empty_audio`/`too_long` 422, `transcription_failed`/`upload_failed` 502.
+- Storage objects can't be deleted with SQL (`storage.protect_delete`); use the Storage API.
 - Request-id middleware sets an `x-request-id` header and a log context var, which covers the structured-logging rule from the start.
 
 ## Known issues
@@ -56,9 +60,14 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - No playwright MCP; UI checks use `@playwright/test` with system Chrome (`channel: "chrome"`) from ad-hoc scripts until the Day 9 e2e suite exists.
 - First request after an API restart is still slower (~7–8 s) because the Groq/Gemini HTTPS connections are cold. Warming them would spend API quota, so it's left as is.
 - Groq latency occasionally spikes (one 8.4 s response seen); the JD timeout keeps the plan under budget but that interview then has bank-only questions.
+- Groq TTS (`canopylabs/orpheus-v1-english`) needs its terms accepted once in the Groq console before F4 can use it.
+- Security advisor: "leaked password protection disabled" — not relevant while sign-in is magic link + Google only.
 - Not deployed yet (Vercel for `apps/web`, Railway for `apps/api`).
 
 ## Log
+### 2026-10-05: F5 Transcription (API)
+- Migration `20261005120000_answer_audio_storage.sql` (bucket + 4 own-folder policies), `GroqSTT`, `services/storage.py`, `services/answers.py`, `routers/answers.py`. Upload and STT run in parallel.
+- Live: 25 s answer transcribed in ~1.7 s (webm and mp4), re-record 2.4 s, and silence/wrong type/11 MB/foreign turn/no token each return their specific error. Turn → `answered`, interview → `in_progress`. 71 tests pass.
 ### 2026-10-05: F3 Question plan (RAG)
 - `services/question_bank.py` (SQL repository, pgvector similarity), `services/question_plan.py` (allocation, level-first topic-diverse picking, JD generation, dedupe and backfill, ordering), prompts in `app/prompts/jd_questions_{system,user}.md`, `InterviewTurn` model, turns in `InterviewOut` (without `ideal_points`).
 - Room page lists the planned questions (temporary until F4) and marks JD questions; setup button says "Preparing your questions…" while waiting.

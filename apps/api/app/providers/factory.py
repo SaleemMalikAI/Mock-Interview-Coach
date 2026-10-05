@@ -61,9 +61,19 @@ def get_embedding_provider() -> EmbeddingProvider:
             raise ProviderConfigError(f"unknown EMBEDDING_PROVIDER: {other!r}")
 
 
+@lru_cache
 def get_stt_provider() -> STTProvider:
-    # Implemented in F5 (transcription).
-    raise ProviderConfigError(f"STT_PROVIDER {get_settings().stt_provider!r} not implemented yet")
+    settings = get_settings()
+    match settings.stt_provider:
+        case "groq":
+            from app.providers.groq import GroqSTT
+
+            return GroqSTT(
+                api_key=_secret(settings.groq_api_key, "GROQ_API_KEY"),
+                model=settings.groq_stt_model,
+            )
+        case other:
+            raise ProviderConfigError(f"unknown STT_PROVIDER: {other!r}")
 
 
 def get_tts_provider() -> TTSProvider:

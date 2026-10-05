@@ -15,7 +15,7 @@ from app.auth import get_jwks_client
 from app.config import get_settings
 from app.db import get_engine
 from app.logging_config import configure_logging, request_id_var
-from app.routers import health, interviews, me
+from app.routers import answers, health, interviews, me
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -85,3 +85,4 @@ async def request_context(
 app.include_router(health.router)
 app.include_router(me.router)
 app.include_router(interviews.router)
+app.include_router(answers.router)

@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     # Groq (LLM, STT, TTS)
     groq_api_key: SecretStr | None = None
     groq_model: str = "openai/gpt-oss-120b"
+    groq_stt_model: str = "whisper-large-v3-turbo"
     # For reasoning models (gpt-oss, qwen3). "low" cuts JD question generation from ~3s to ~1.3s.
     # Leave empty for non-reasoning models, which reject the parameter.
     groq_reasoning_effort: Literal["low", "medium", "high"] | None = "low"
@@ -39,6 +40,12 @@ class Settings(BaseSettings):
 
     # Supabase project URL; access tokens are verified against its JWKS
     supabase_url: str = ""
+    # Public key, used with the caller's own JWT for Storage (RLS applies)
+    supabase_publishable_key: str = ""
+
+    # F5 answer upload limits
+    answer_max_bytes: int = 10 * 1024 * 1024
+    answer_max_seconds: float = 180
 
     # Database (Supabase Postgres; the pooler connection string)
     database_url: SecretStr | None = None

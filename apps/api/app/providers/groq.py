@@ -5,7 +5,7 @@ from groq import APIError, AsyncGroq
 from groq.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel
 
-from app.providers.base import LLMProvider, ProviderError
+from app.providers.base import LLMProvider, ProviderError, STTProvider, Transcript
 
 
 def _messages(prompt: str, system: str | None) -> list[ChatCompletionMessageParam]:
@@ -90,3 +90,35 @@ class GroqLLM(LLMProvider):
         except APIError as exc:
             raise ProviderError(f"groq chat completion (json) failed: {exc}") from exc
         return response.choices[0].message.content or ""
+
+
+# Whisper drops filler words unless the prompt contains some; F6 counts them.
+_FILLER_PROMPT = "Um, uh, like, you know, so, basically, actually. I mean, um, let me think."
+
+
+class GroqSTT(STTProvider):
+    name = "groq"
+
+    def __init__(self, *, api_key: str, model: str) -> None:
+        self._client = AsyncGroq(api_key=api_key, max_retries=2)
+        self._model = model
+
+    async def transcribe(self, audio: bytes, *, mime_type: str) -> Transcript:
+        extension = mime_type.split("/")[-1]
+        try:
+            result = await self._client.audio.transcriptions.create(
+                file=(f"answer.{extension}", audio, mime_type),
+                model=self._model,
+                response_format="verbose_json",
+                language="en",
+                temperature=0,
+                prompt=_FILLER_PROMPT,
+            )
+        except APIError as exc:
+            raise ProviderError(f"groq transcription failed: {exc}") from exc
+        # verbose_json adds `duration`, which the typed response model doesn't declare
+        duration = getattr(result, "duration", None)
+        return Transcript(
+            text=result.text.strip(),
+            duration_seconds=float(duration) if duration is not None else None,
+        )
