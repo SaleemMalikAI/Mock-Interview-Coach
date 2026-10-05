@@ -1,0 +1,21 @@
+# env files: never commit secrets
+.env
+.env.*
+!.env.example
+
+# node
+node_modules/
+.next/
+.vercel/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/

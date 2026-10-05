@@ -1,0 +1,40 @@
+# Local dev: `docker compose up` starts web (http://localhost:3000) and api (http://localhost:8000/docs)
+# with hot reload. Source folders are bind-mounted; dependencies live inside the containers.
+services:
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: ./apps/api/.env
+        required: false
+    volumes:
+      - ./apps/api:/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: ./apps/web/.env.local
+        required: false
+    environment:
+      # Browser calls go to the host port; server-side calls use the compose network
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      API_URL_INTERNAL: http://api:8000
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      api:
+        condition: service_healthy
