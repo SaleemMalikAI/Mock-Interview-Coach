@@ -67,6 +67,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - Request-id middleware sets an `x-request-id` header and a log context var, which covers the structured-logging rule from the start.
 
 ## Known issues
+- No CI yet (deferred by the user on 2026-10-05): deploys are CD-only via Vercel. Planned: GitHub Actions running api (ruff, pytest) and web (lint, typecheck, build) on every push/PR, plus branch protection on `main`; later the Playwright e2e and F7 eval jobs.
 - Supabase MCP is connected. context7, playwright and `.claude/` (`/feature`) from the kit are still missing.
 - The Gemini key has 0 quota for text generation (embeddings work). Not a blocker since the LLM moved to Groq; `GeminiLLM` stays available via `LLM_PROVIDER=gemini` if the quota is fixed.
 - The Groq key was pasted in chat once; rotate it in the Groq console when convenient.
