@@ -6,7 +6,7 @@ from google import genai
 from google.genai import errors, types
 from pydantic import BaseModel
 
-from app.providers.base import EmbeddingTask, LLMProvider, ProviderError
+from app.providers.base import EmbeddingProvider, EmbeddingTask, LLMProvider, ProviderError
 
 _TASK_TYPES: dict[EmbeddingTask, str] = {
     "document": "RETRIEVAL_DOCUMENT",
@@ -24,13 +24,9 @@ logger = logging.getLogger(__name__)
 class GeminiLLM(LLMProvider):
     name = "gemini"
 
-    def __init__(
-        self, *, api_key: str, model: str, embedding_model: str, embedding_dimensions: int
-    ) -> None:
+    def __init__(self, *, api_key: str, model: str) -> None:
         self._client = genai.Client(api_key=api_key)
         self._model = model
-        self._embedding_model = embedding_model
-        self._embedding_dimensions = embedding_dimensions
 
     def _config(self, system: str | None, temperature: float) -> types.GenerateContentConfig:
         return types.GenerateContentConfig(
@@ -83,6 +79,15 @@ class GeminiLLM(LLMProvider):
             raise ProviderError(f"gemini generate_content (json) failed: {exc}") from exc
         return response.text or ""
 
+
+class GeminiEmbeddings(EmbeddingProvider):
+    name = "gemini"
+
+    def __init__(self, *, api_key: str, model: str, dimensions: int) -> None:
+        self._client = genai.Client(api_key=api_key)
+        self._model = model
+        self._dimensions = dimensions
+
     async def embed(self, texts: list[str], *, task: EmbeddingTask) -> list[list[float]]:
         vectors: list[list[float]] = []
         for start in range(0, len(texts), _EMBED_BATCH_SIZE):
@@ -100,12 +105,12 @@ class GeminiLLM(LLMProvider):
         self, batch: list[str], task: EmbeddingTask
     ) -> types.EmbedContentResponse:
         config = types.EmbedContentConfig(
-            task_type=_TASK_TYPES[task], output_dimensionality=self._embedding_dimensions
+            task_type=_TASK_TYPES[task], output_dimensionality=self._dimensions
         )
         for attempt in range(_RATE_LIMIT_RETRIES + 1):
             try:
                 return await self._client.aio.models.embed_content(
-                    model=self._embedding_model, contents=batch, config=config
+                    model=self._model, contents=batch, config=config
                 )
             except errors.APIError as exc:
                 if exc.code != 429 or attempt == _RATE_LIMIT_RETRIES:

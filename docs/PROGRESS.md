@@ -22,7 +22,8 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - The API is a uv app (`package = false`), not a package, so `uvicorn app.main:app` works from `apps/api`.
 - `docker compose up` runs both apps for local dev with bind mounts and hot reload. Inside compose, server-side fetches use `API_URL_INTERNAL=http://api:8000`, and the browser uses `NEXT_PUBLIC_API_URL`.
 - Supabase dev project `mock-interview-dev` (ref `psgayxaehcsjhlnuzebi`, region ap-south-1). The web app uses the new publishable key (`sb_publishable_...`) instead of the legacy anon JWT. `.mcp.json` is scoped to this project.
-- Gemini is the default for all three providers (`LLM_PROVIDER=gemini`); models are pinned by env (`GEMINI_MODEL`, `GEMINI_EMBEDDING_MODEL`). Embeddings are `gemini-embedding-001` at 768 dims, matching `vector(768)`.
+- Providers: **Groq** for the LLM (`openai/gpt-oss-120b`, strict JSON schema, ~1.5s per JSON call, first stream chunk ~0.5–1.2s) and later STT (`whisper-large-v3-turbo`) and TTS (`canopylabs/orpheus-v1-english`). **Gemini** only for embeddings (`gemini-embedding-001`, 768 dims, matching `vector(768)`).
+- Embeddings are their own `EmbeddingProvider` (`EMBEDDING_PROVIDER`), separate from `LLMProvider`, so the LLM vendor can change without re-seeding. Changing the embedding model requires re-running the seed.
 - `generate_json` retry-once logic lives in `LLMProvider` (base class), so every provider gets the same validation and `InvalidLLMOutputError` behavior.
 - FastAPI connects to Postgres directly (`DATABASE_URL`, transaction pooler) and bypasses RLS. Services must always filter by `user_id`. RLS protects any direct client access.
 - Question bank lives in `apps/api/scripts/data/questions.json` (100 hand-written questions); the seed script embeds `topic + question + ideal_points` and upserts on `question`.
@@ -30,7 +31,8 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 
 ## Known issues
 - Supabase MCP is connected. context7, playwright and `.claude/` (`/feature`) from the kit are still missing.
-- The Gemini key's Google Cloud project has **0 quota for generate_content** on every model (429, `quota_limit_value: 0`). Embeddings work. This must be fixed before F3 (JD questions) and F7 (evaluation): create the key in Google AI Studio on a project with free tier, or enable billing.
+- The Gemini key has 0 quota for text generation (embeddings work). Not a blocker since the LLM moved to Groq; `GeminiLLM` stays available via `LLM_PROVIDER=gemini` if the quota is fixed.
+- The Groq key was pasted in chat once; rotate it in the Groq console when convenient.
 - STT and TTS providers are interfaces only; implementations come in F5 and F4.
 - Not deployed yet (Vercel for `apps/web`, Railway for `apps/api`).
 
@@ -42,6 +44,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - `apps/web/lib/database.types.ts` generated via MCP.
 - Seeded: 100 rows (25 per role), all with 768-dim embeddings; a vector similarity check returns related questions (RAG → RAG questions, 0.87–0.90).
 - `DATABASE_URL` must use the pooler host (`aws-0-ap-south-1.pooler.supabase.com:6543`, user `postgres.<ref>`). The direct `db.<ref>` host is IPv6-only and unreachable here.
+- Switched LLM to Groq (`providers/groq.py`) and split out `EmbeddingProvider`; verified live: generate_json, stream_text, generate_text (Groq) and embed (Gemini).
 - Gemini embed calls retry on 429 (free tier: 100 inputs/min) with batches of 50.
 - Tests: 6 pass (health, generate_json retry/typed error, seed data shape). Live check: Gemini embeddings return 768 dims.
 ### 2026-10-05: Day 1 scaffold

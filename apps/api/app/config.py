@@ -12,11 +12,17 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # Provider selection (see app/providers/factory.py)
-    stt_provider: str = "gemini"
-    tts_provider: str = "gemini"
-    llm_provider: str = "gemini"
+    llm_provider: str = "groq"
+    stt_provider: str = "groq"
+    tts_provider: str = "groq"
+    # Keep fixed: changing it means re-running scripts/seed_questions.py
+    embedding_provider: str = "gemini"
 
-    # Gemini
+    # Groq (LLM, STT, TTS)
+    groq_api_key: SecretStr | None = None
+    groq_model: str = "openai/gpt-oss-120b"
+
+    # Gemini (embeddings; LLM if LLM_PROVIDER=gemini)
     gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.8-flash"
     gemini_embedding_model: str = "gemini-embedding-001"

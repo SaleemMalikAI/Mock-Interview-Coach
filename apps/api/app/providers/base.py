@@ -61,9 +61,6 @@ class LLMProvider(ABC):
     ) -> str:
         """Return the raw JSON text the model produced for `schema`."""
 
-    @abstractmethod
-    async def embed(self, texts: list[str], *, task: EmbeddingTask) -> list[list[float]]: ...
-
     async def generate_json[T: BaseModel](
         self,
         prompt: str,
@@ -92,6 +89,16 @@ class LLMProvider(ABC):
         raise InvalidLLMOutputError(
             f"{self.name} returned invalid {schema.__name__} twice"
         ) from last_error
+
+
+class EmbeddingProvider(ABC):
+    """Separate from LLMProvider: vectors in question_bank must all come from the same model,
+    so the embedding vendor can stay fixed while the LLM vendor changes."""
+
+    name: str
+
+    @abstractmethod
+    async def embed(self, texts: list[str], *, task: EmbeddingTask) -> list[list[float]]: ...
 
 
 class STTProvider(ABC):

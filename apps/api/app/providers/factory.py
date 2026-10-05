@@ -1,30 +1,62 @@
 from functools import lru_cache
 
+from pydantic import SecretStr
+
 from app.config import get_settings
-from app.providers.base import LLMProvider, ProviderError, STTProvider, TTSProvider
+from app.providers.base import (
+    EmbeddingProvider,
+    LLMProvider,
+    ProviderError,
+    STTProvider,
+    TTSProvider,
+)
 
 
 class ProviderConfigError(ProviderError):
     """The configured provider is unknown, not implemented yet, or missing its API key."""
 
 
+def _secret(value: SecretStr | None, env_name: str) -> str:
+    if value is None or not value.get_secret_value():
+        raise ProviderConfigError(f"{env_name} is not set")
+    return value.get_secret_value()
+
+
 @lru_cache
 def get_llm_provider() -> LLMProvider:
     settings = get_settings()
     match settings.llm_provider:
+        case "groq":
+            from app.providers.groq import GroqLLM
+
+            return GroqLLM(
+                api_key=_secret(settings.groq_api_key, "GROQ_API_KEY"), model=settings.groq_model
+            )
         case "gemini":
-            if not settings.gemini_api_key:
-                raise ProviderConfigError("GEMINI_API_KEY is not set")
             from app.providers.gemini import GeminiLLM
 
             return GeminiLLM(
-                api_key=settings.gemini_api_key.get_secret_value(),
+                api_key=_secret(settings.gemini_api_key, "GEMINI_API_KEY"),
                 model=settings.gemini_model,
-                embedding_model=settings.gemini_embedding_model,
-                embedding_dimensions=settings.embedding_dimensions,
             )
         case other:
             raise ProviderConfigError(f"unknown LLM_PROVIDER: {other!r}")
+
+
+@lru_cache
+def get_embedding_provider() -> EmbeddingProvider:
+    settings = get_settings()
+    match settings.embedding_provider:
+        case "gemini":
+            from app.providers.gemini import GeminiEmbeddings
+
+            return GeminiEmbeddings(
+                api_key=_secret(settings.gemini_api_key, "GEMINI_API_KEY"),
+                model=settings.gemini_embedding_model,
+                dimensions=settings.embedding_dimensions,
+            )
+        case other:
+            raise ProviderConfigError(f"unknown EMBEDDING_PROVIDER: {other!r}")
 
 
 def get_stt_provider() -> STTProvider:

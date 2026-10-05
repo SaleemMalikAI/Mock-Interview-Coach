@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator
 import pytest
 from pydantic import BaseModel
 
-from app.providers.base import EmbeddingTask, InvalidLLMOutputError, LLMProvider
+from app.providers.base import InvalidLLMOutputError, LLMProvider
 
 
 class Score(BaseModel):
@@ -32,9 +32,6 @@ class FakeLLM(LLMProvider):
     ) -> str:
         self.calls += 1
         return self.responses[self.calls - 1]
-
-    async def embed(self, texts: list[str], *, task: EmbeddingTask) -> list[list[float]]:
-        return [[0.0] for _ in texts]
 
 
 async def test_generate_json_returns_valid_model() -> None:

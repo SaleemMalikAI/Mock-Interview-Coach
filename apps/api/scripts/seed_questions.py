@@ -19,7 +19,7 @@ from sqlalchemy import text
 
 from app.config import get_settings
 from app.db import get_engine
-from app.providers.factory import get_llm_provider
+from app.providers.factory import get_embedding_provider
 
 DATA_FILE = Path(__file__).parent / "data" / "questions.json"
 logger = logging.getLogger("seed_questions")
@@ -70,8 +70,8 @@ async def seed(dry_run: bool) -> None:
     if dry_run:
         return
 
-    llm = get_llm_provider()
-    vectors = await llm.embed([embedding_text(q) for q in questions], task="document")
+    embedder = get_embedding_provider()
+    vectors = await embedder.embed([embedding_text(q) for q in questions], task="document")
     expected_dim = get_settings().embedding_dimensions
     if any(len(v) != expected_dim for v in vectors):
         raise ValueError(f"embedding size mismatch, expected {expected_dim}")
