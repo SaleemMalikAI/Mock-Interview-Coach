@@ -60,7 +60,7 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - Filters and search on history/question bank are server-rendered links and GET forms: shareable URLs, no client JS needed.
 - Chart colour validated with the dataviz palette validator; dark mode uses its own chart step (`--chart-1` L 0.62) because the button primary (L 0.68) fails the dark lightness band.
 - Deployment: both apps on Vercel, auto-deployed on push to `main`; each project's `ignoreCommand` skips builds when its folder didn't change.
-  - Web: project `mock-interview-coach`, root `apps/web`, https://mock-interview-coach-rust.vercel.app (`mock-interview-coach.vercel.app` belongs to someone else).
+  - Web: project `mock-interview-coach`, root `apps/web`, functions pinned to `bom1` like the API (server renders call the API and Supabase, both in Mumbai), https://mock-interview-coach-rust.vercel.app (`mock-interview-coach.vercel.app` belongs to someone else).
   - API: project `mock-interview-api`, root `apps/api`, https://mock-interview-api.vercel.app, Python Fluid Compute pinned to `bom1` (Mumbai, next to Supabase ap-south-1), entrypoint `apps/api/index.py`. Doesn't sleep like Render's free plan.
   - Render was dropped because it required a card even for the free plan. `apps/api/Dockerfile` (production image) is kept for any container host.
 - With Vercel's root directory set to `apps/web`, deploy by pushing to `main` (or run `vercel` from the repo root), not from inside `apps/web`.
