@@ -8,6 +8,7 @@ Role = Literal["frontend", "full_stack", "ai_engineer", "behavioral"]
 Level = Literal["junior", "mid", "senior"]
 InterviewType = Literal["technical", "behavioral", "mixed"]
 InterviewStatus = Literal["setup", "in_progress", "completed", "abandoned"]
+TurnStatus = Literal["pending", "answered", "skipped", "evaluated"]
 
 JOB_DESCRIPTION_MAX_CHARS = 5000
 
@@ -36,6 +37,19 @@ class InterviewCreate(BaseModel):
         return self
 
 
+class TurnOut(BaseModel):
+    """A planned question as the candidate sees it. ideal_points are the grading key, so they
+    are never sent to the browser."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    position: int
+    question: str
+    source: Literal["bank", "jd"]
+    status: TurnStatus
+
+
 class InterviewOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -49,3 +63,4 @@ class InterviewOut(BaseModel):
     overall_score: float | None
     created_at: datetime
     completed_at: datetime | None
+    turns: list[TurnOut] = []

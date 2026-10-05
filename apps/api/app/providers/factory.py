@@ -30,7 +30,9 @@ def get_llm_provider() -> LLMProvider:
             from app.providers.groq import GroqLLM
 
             return GroqLLM(
-                api_key=_secret(settings.groq_api_key, "GROQ_API_KEY"), model=settings.groq_model
+                api_key=_secret(settings.groq_api_key, "GROQ_API_KEY"),
+                model=settings.groq_model,
+                reasoning_effort=settings.groq_reasoning_effort,
             )
         case "gemini":
             from app.providers.gemini import GeminiLLM

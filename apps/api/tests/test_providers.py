@@ -51,3 +51,10 @@ async def test_generate_json_raises_typed_error_after_two_failures() -> None:
     with pytest.raises(InvalidLLMOutputError):
         await llm.generate_json("p", Score)
     assert llm.calls == 2
+
+
+def test_empty_reasoning_effort_env_means_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.config import Settings
+
+    monkeypatch.setenv("GROQ_REASONING_EFFORT", "")
+    assert Settings(_env_file=None).groq_reasoning_effort is None

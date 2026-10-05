@@ -1,34 +1,75 @@
 import logging
-from uuid import UUID
+from dataclasses import dataclass
+from uuid import UUID, uuid4
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Interview
+from app.models import Interview, InterviewTurn
 from app.schemas.interviews import InterviewCreate
+from app.services.question_plan import QuestionPlanner
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class InterviewWithTurns:
+    interview: Interview
+    turns: list[InterviewTurn]
 
 
 class InterviewService:
     """The API connects as a privileged role that bypasses RLS, so every query here
     must scope by user_id itself."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, planner: QuestionPlanner) -> None:
         self._session = session
+        self._planner = planner
 
-    async def create(self, user_id: UUID, data: InterviewCreate) -> Interview:
-        interview = Interview(user_id=user_id, **data.model_dump())
+    async def create(self, user_id: UUID, data: InterviewCreate) -> InterviewWithTurns:
+        # Build the plan before opening the write transaction: it calls external providers.
+        plan = await self._planner.build(data)
+
+        interview = Interview(id=uuid4(), user_id=user_id, **data.model_dump())
+        turns = [
+            InterviewTurn(
+                interview_id=interview.id,
+                user_id=user_id,
+                position=position,
+                question=planned.question,
+                ideal_points=planned.ideal_points,
+                source=planned.source,
+                question_bank_id=planned.question_bank_id,
+            )
+            for position, planned in enumerate(plan, start=1)
+        ]
         self._session.add(interview)
+        self._session.add_all(turns)
+        # One transaction; eager_defaults returns status/created_at from the INSERTs.
         await self._session.commit()
-        await self._session.refresh(interview)
         logger.info(
-            "interview %s created (%s/%s/%s)", interview.id, data.role, data.level, data.type
+            "interview %s created (%s/%s/%s) with %d turns",
+            interview.id,
+            data.role,
+            data.level,
+            data.type,
+            len(turns),
         )
-        return interview
+        return InterviewWithTurns(interview, turns)
 
-    async def get(self, user_id: UUID, interview_id: UUID) -> Interview | None:
-        result = await self._session.execute(
-            select(Interview).where(Interview.id == interview_id, Interview.user_id == user_id)
-        )
-        return result.scalar_one_or_none()
+    async def get(self, user_id: UUID, interview_id: UUID) -> InterviewWithTurns | None:
+        interview = (
+            await self._session.execute(
+                select(Interview).where(Interview.id == interview_id, Interview.user_id == user_id)
+            )
+        ).scalar_one_or_none()
+        if interview is None:
+            return None
+        turns = (
+            await self._session.execute(
+                select(InterviewTurn)
+                .where(InterviewTurn.interview_id == interview.id)
+                .order_by(InterviewTurn.position)
+            )
+        ).scalars()
+        return InterviewWithTurns(interview, list(turns))

@@ -9,9 +9,10 @@ from pydantic import ValidationError
 
 from app.auth import CurrentUser, get_current_user
 from app.main import app
-from app.models import Interview
+from app.models import Interview, InterviewTurn
 from app.routers.interviews import get_interview_service
 from app.schemas.interviews import InterviewCreate
+from app.services.interviews import InterviewWithTurns
 
 USER = CurrentUser(id=uuid.uuid4(), email="dev@example.com")
 VALID = {"role": "full_stack", "level": "mid", "type": "technical", "num_questions": 5}
@@ -19,9 +20,9 @@ VALID = {"role": "full_stack", "level": "mid", "type": "technical", "num_questio
 
 class FakeInterviewService:
     def __init__(self) -> None:
-        self.rows: dict[uuid.UUID, Interview] = {}
+        self.rows: dict[uuid.UUID, InterviewWithTurns] = {}
 
-    async def create(self, user_id: uuid.UUID, data: InterviewCreate) -> Interview:
+    async def create(self, user_id: uuid.UUID, data: InterviewCreate) -> InterviewWithTurns:
         row = Interview(
             id=uuid.uuid4(),
             user_id=user_id,
@@ -31,12 +32,25 @@ class FakeInterviewService:
             completed_at=None,
             **data.model_dump(),
         )
-        self.rows[row.id] = row
-        return row
+        turns = [
+            InterviewTurn(
+                id=uuid.uuid4(),
+                interview_id=row.id,
+                user_id=user_id,
+                position=n,
+                question=f"Question {n}?",
+                ideal_points=["secret point"],
+                source="bank",
+                status="pending",
+            )
+            for n in range(1, data.num_questions + 1)
+        ]
+        self.rows[row.id] = InterviewWithTurns(row, turns)
+        return self.rows[row.id]
 
-    async def get(self, user_id: uuid.UUID, interview_id: uuid.UUID) -> Interview | None:
-        row = self.rows.get(interview_id)
-        return row if row and row.user_id == user_id else None
+    async def get(self, user_id: uuid.UUID, interview_id: uuid.UUID) -> InterviewWithTurns | None:
+        found = self.rows.get(interview_id)
+        return found if found and found.interview.user_id == user_id else None
 
 
 @pytest.fixture
@@ -62,6 +76,9 @@ async def test_create_interview_returns_201(client: AsyncClient) -> None:
     assert body["status"] == "setup"
     assert body["job_description"] == "We build APIs."
     assert body["num_questions"] == 5
+    assert [t["position"] for t in body["turns"]] == [1, 2, 3, 4, 5]
+    # The grading key must never reach the browser
+    assert all("ideal_points" not in t for t in body["turns"])
 
 
 async def test_get_own_interview(client: AsyncClient) -> None:
@@ -75,7 +92,7 @@ async def test_other_users_interview_is_404(
     client: AsyncClient, service: FakeInterviewService
 ) -> None:
     other = await service.create(uuid.uuid4(), InterviewCreate.model_validate(VALID))
-    response = await client.get(f"/interviews/{other.id}")
+    response = await client.get(f"/interviews/{other.interview.id}")
     assert response.status_code == 404
 
 

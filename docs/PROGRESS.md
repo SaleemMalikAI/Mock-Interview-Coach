@@ -6,7 +6,7 @@ Claude updates this at the end of every feature. Newest entry on top.
 |---|---|---|
 | F1 Auth | ✅ | Magic link + Google (Google needs OAuth client in dashboard), proxy guards, FastAPI JWKS verification |
 | F2 Interview setup | ✅ | `/interview/new` → `POST /interviews` → redirect to `/interview/[id]` (room placeholder) |
-| F3 Question plan (RAG) | ⬜ | |
+| F3 Question plan (RAG) | ✅ | Built inside `POST /interviews`; ~2.5–2.9 s planning, 4.1–4.7 s per request from Pakistan to the Mumbai DB |
 | F4 Interview room | ⬜ | |
 | F5 Transcription | ⬜ | |
 | F6 Speech metrics | ⬜ | |
@@ -36,6 +36,13 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - `role=behavioral` only allows `type=behavioral`: enforced in the Pydantic schema (422) and in the UI (other types disabled).
 - Other users' interviews return 404, not 403, so ids can't be probed.
 - Base UI radios put the `id` on a hidden native input; use `label[for=...]` or `aria-checked` on the visible span when testing.
+- F3 plan is built in `POST /interviews` before the write transaction, then the interview and its turns are inserted in one commit. No interview ever exists without questions.
+- Bank selection: requested level first (nearest level only when it runs out), distinct topics within a level, JD cosine similarity (pgvector `<=>`) as the order when a JD is given, otherwise random. Mixed = `num_questions // 3` behavioral questions. JD questions: 1 for 3-question interviews, else 2.
+- JD safety: the JD is stripped of `<job_description>` tags and wrapped in them; the system prompt marks it untrusted and tells the model to ignore instructions inside it. Live test with an injection attempt produced a normal on-topic question.
+- Every provider failure degrades instead of failing: embedding error → random order; LLM error, invalid JSON or > `JD_GENERATION_TIMEOUT_SECONDS` (3.5 s) → bank questions fill the JD slots.
+- `ideal_points` are stored on turns but never returned by the API (grading key).
+- Groq `reasoning_effort=low` (`GROQ_REASONING_EFFORT`): JD generation ~3.0 s → ~1.4 s with equal quality.
+- DB round trips are ~160 ms from local dev to the Mumbai pooler, so the code minimizes them: `eager_defaults` + client-side UUIDs (no refresh queries), one bank query for both pools, and a startup warm-up (DB connection + JWKS). Deploy the API in or near `ap-south-1`.
 - Request-id middleware sets an `x-request-id` header and a log context var, which covers the structured-logging rule from the start.
 
 ## Known issues
@@ -47,9 +54,15 @@ Status: ⬜ not started · 🟨 in progress · ✅ done
 - Google sign-in needs a Google OAuth client ID/secret set in Supabase → Authentication → Providers → Google.
 - The default Supabase email sender is heavily rate-limited (a few emails per hour). Add custom SMTP (e.g. Resend) before demos.
 - No playwright MCP; UI checks use `@playwright/test` with system Chrome (`channel: "chrome"`) from ad-hoc scripts until the Day 9 e2e suite exists.
+- First request after an API restart is still slower (~7–8 s) because the Groq/Gemini HTTPS connections are cold. Warming them would spend API quota, so it's left as is.
+- Groq latency occasionally spikes (one 8.4 s response seen); the JD timeout keeps the plan under budget but that interview then has bank-only questions.
 - Not deployed yet (Vercel for `apps/web`, Railway for `apps/api`).
 
 ## Log
+### 2026-10-05: F3 Question plan (RAG)
+- `services/question_bank.py` (SQL repository, pgvector similarity), `services/question_plan.py` (allocation, level-first topic-diverse picking, JD generation, dedupe and backfill, ordering), prompts in `app/prompts/jd_questions_{system,user}.md`, `InterviewTurn` model, turns in `InterviewOut` (without `ideal_points`).
+- Room page lists the planned questions (temporary until F4) and marks JD questions; setup button says "Preparing your questions…" while waiting.
+- Tests: 49 pass (allocation table, counts for 3/5/8, level-first, level fallback, topic diversity, JD ordering, sanitizing and untrusted wrapper, duplicate replacement, LLM failure, LLM timeout, embedding failure, mixed). Live: 15 interviews / 111 turns with 0 duplicates and 0 position gaps; browser flow at 360px with no console errors.
 ### 2026-10-05: F2 Interview setup
 - API: `models.py` (`Interview`), `schemas/interviews.py`, `services/interviews.py` (always scoped by `user_id`), `routers/interviews.py` (`POST /interviews`, `GET /interviews/{id}`), `db.get_session`. 13 new tests (26 total): create, own vs other user's interview, 7 invalid payloads, auth required, validators.
 - Web: `/interview/new` with `OptionGroup` radio cards, job description counter (5,000 cap), Server Action with pending and error states; `/interview/[id]` placeholder room (404 for unknown or foreign ids); "New interview" on the dashboard.

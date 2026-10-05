@@ -34,6 +34,14 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   return (await res.json()) as T;
 }
 
+export type InterviewTurn = {
+  id: string;
+  position: number;
+  question: string;
+  source: "bank" | "jd";
+  status: "pending" | "answered" | "skipped" | "evaluated";
+};
+
 export type Interview = {
   id: string;
   role: "frontend" | "full_stack" | "ai_engineer" | "behavioral";
@@ -45,6 +53,7 @@ export type Interview = {
   overall_score: number | null;
   created_at: string;
   completed_at: string | null;
+  turns: InterviewTurn[];
 };
 
 export type CreateInterviewInput = Pick<Interview, "role" | "level" | "type" | "num_questions" | "job_description">;

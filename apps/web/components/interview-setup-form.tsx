@@ -96,7 +96,7 @@ export function InterviewSetupForm() {
       ) : null}
 
       <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={pending}>
-        {pending ? "Creating interview…" : "Start interview"}
+        {pending ? "Preparing your questions…" : "Start interview"}
       </Button>
     </form>
   );
